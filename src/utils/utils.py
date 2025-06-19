@@ -1,31 +1,95 @@
 import streamlit as st
 
 
-def generate_project_card(project:dict)->str:
-    tech_stack = " • ".join(project['tech_stack']) if isinstance(project['tech_stack'], list) else project['tech_stack']
-    desired_roles = " | ".join(project['desired_roles']) if isinstance(project['desired_roles'], list) else project['desired_roles']
-    collaborators = ", ".join(project['collaborators']) if isinstance(project['collaborators'], list) else project['collaborators']
+def add_bootstrap():
+    bootstrap_str = """
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .project-card {
+            transition: transform 0.2s;
+            margin-bottom: 1.5rem;
+        }
+        .project-card:hover {
+            transform: translateY(-2px);
+        }
+        .tech-badge {
+            margin-right: 0.3rem;
+            margin-bottom: 0.3rem;
+            font-size: 0.7rem;
+        }
+        .role-badge {
+            margin-right: 0.3rem;
+            margin-bottom: 0.3rem;
+        }
+        .card-footer-item {
+            font-size: 0.85rem;
+        }
+    </style>
+    """
+    return bootstrap_str
 
-    card = st.markdown(f"""
-        <div style="
-            background-color: white;
-            padding: 1rem;
-            border-radius: 15px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-            margin-bottom: 1.2rem;
-            border: 1px solid #e0e0e0;
-            font-size: 15px;
-        ">
-            <h4 style="color: #333; margin-bottom: 0.4rem;">{project['title']}</h4>
-            <p style="color: #555; margin: 0.2rem 0;"><strong>Description:</strong> {project['description']}</p>
-            <p style="color: #555; margin: 0.2rem 0;"><strong>Tech Stack:</strong> {tech_stack}</p>
-            <p style="color: #555; margin: 0.2rem 0;"><strong>Desired Roles:</strong> {desired_roles}</p>
-            <p style="color: #555; margin: 0.2rem 0;"><strong>Open to Collaboration:</strong> {"✅ Yes" if project['is_open_to_collab'] else "❌ No"}</p>
-            <p style="color: #555; margin: 0.2rem 0;"><strong>Collaborators:</strong> {collaborators}</p>
-            <p style="margin-top: 0.4rem;">
-                🔗 <a href="{project['github_url']}" target="_blank" style="color: #4f46e5; font-weight: bold;">GitHub Repository</a>
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    return card
+def project_card(project):
+    with st.container(border=True):
+    # Card header with title and description
+        st.markdown(f"""
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="mb-1" style='color: #2c3e50;'>{project['title']}</h5>
+                <span class="badge bg-{'success' if project['is_open_to_collab'] else 'secondary'}">
+                    {'Open' if project['is_open_to_collab'] else 'Closed'} to Collab
+                </span>
+            </div>
+            <p class="text-muted mb-3">{project['description']}</p>
+            """, unsafe_allow_html=True)
+            
+            # Tech stack and roles in a row
+        col1, col2 = st.columns(2)
+            
+        with col1:
+            st.markdown("""
+            <p class="fw-bold mb-1" style="color: #e67e22;">Tech Stack</p>
+            <div class="d-flex flex-wrap">
+            """ + 
+            "".join([f'<span class="badge tech-badge bg-primary">{tech}</span>' for tech in project['tech_stack']]) +
+            """
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with col2:
+            st.markdown("""
+            <p class="fw-bold mb-1" style="color: #e67e22;">Desired Roles</p>
+            <div class="d-flex flex-wrap">
+            """ + 
+            "".join([f'<span class="badge role-badge bg-info text-dark">{role}</span>' for role in project['desired_roles']]) +
+            """
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Footer with metadata
+            st.markdown("""
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <div>
+                    <small class="fw-bold" style="color: #7f8c8d;">Owner</small><br>
+                    <small>{owner}</small>
+                </div>
+                <div>
+                    <small class="fw-bold" style="color: #7f8c8d;">Project URL</small><br>
+                    <small><a href="{github_url}" target="_blank">GitHub Repository</a></small>
+                </div>
+                <div>
+                    <small class="fw-bold" style="color: #7f8c8d;">Collaborators</small><br>
+                    <small>{collab_count}</small>
+                </div>
+            </div>
+            """.format(
+                owner=project['owner'],
+                github_url=project['github_url'],
+                collab_count=len(project['collaborators'])
+            ), unsafe_allow_html=True)
+            
+            # Join button if open to collaboration
+        if project['is_open_to_collab']:
+            st.markdown("""
+            <div class="d-grid gap-2 mt-3">
+                <button class="btn btn-success btn-sm" type="button">Join Project</button>
+            </div>
+            """, unsafe_allow_html=True)

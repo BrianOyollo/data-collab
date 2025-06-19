@@ -2,13 +2,20 @@ import streamlit as st
 from html import escape
 from utils import utils
 
-st.header("Projects")
+
+
+
+st.subheader(f"Projects(37)")
+
+
+
+
 
 dummy_projects = [
     {
         "id":1,
         "category": "Data Visualization",
-        "title": "Interactive Dashboard for Airbnb Listings",
+        "title": "Interactive Dashboard for Airbnb Listings with Artificial Intelligence",
         "description": "We are building an interactive dashboard to visualize Airbnb listings by city, room type, and price range using the anonymized OpenDataSoft dataset. The dashboard will allow filtering by various parameters and map-based visualizations with Leaflet or Mapbox.",
         "tech_stack": ["JavaScript", "React", "D3.js", "Mapbox", "Flask"],
         "github_url": "https://github.com/boyollo/airbnb-dashboard",
@@ -50,7 +57,7 @@ dummy_projects = [
         "github_url": "https://github.com/boyollo/airbnb-dashboard",
         "is_open_to_collab": True,
         "desired_roles": ["Frontend Developer", "Data Visualization Specialist", "UX Designer"],
-        "owner": "Brian Oyollo",
+        "owner": "John Doe",
         "collaborators": ["John Ouma", "Fatima Elmi"]
     },
     {
@@ -62,54 +69,47 @@ dummy_projects = [
         "github_url": "https://github.com/boyollo/ai-resume-matcher",
         "is_open_to_collab": True,
         "desired_roles": ["NLP Engineer", "Backend Developer", "HR Tech Enthusiast"],
-        "owner": "Brian Oyollo",
+        "owner": "Jane Doe",
         "collaborators": ["Aisha Noor", "Kelvin Otieno"]
     },
 ]
 
-# for i in range(0, len(dummy_projects), 3):
-#     cols = st.columns(3, border=True)  # Make 3 side-by-side columns
-#     for j in range(3):  # Fill each column
-#         if i + j < len(dummy_projects):  # Check bounds
-#             with cols[j]:  # Add item to that column
-#                 project = dummy_projects[i + j]
-#                 utils.generate_project_card(project)
-#                 # join project card
-#                 col1, col2, col3 = st.columns([1, 2, 1])
-#                 with col2:
-#                     if st.button("🚀 Join This Project", key=f"project_{project['id']}"):
-#                         st.success("You've requested to join this project!")
 
-with st.container():
-    project = dummy_projects[0]
-    tech_stack = " • ".join(project['tech_stack']) if isinstance(project['tech_stack'], list) else project['tech_stack']
-    desired_roles = " | ".join(project['desired_roles']) if isinstance(project['desired_roles'], list) else project['desired_roles']
-    collaborators = ", ".join(project['collaborators']) if isinstance(project['collaborators'], list) else project['collaborators']
+for project in dummy_projects:
+   with st.container(border=True, key=f"cont_{project['id']}"):
+        st.html(f"<h5 style='margin:0'>{project['title']}</h5>")
+        st.html(f"<small>{project['description']}</small>")
 
-    st.markdown(f"""
-    <h2 style="color:#333;">{project['title']}</h2>
+        tech_stack, desired_roles = st.columns(2)
+        tech_stack_items = " • ".join(project['tech_stack']) if isinstance(project['tech_stack'], list) else project['tech_stack']
+        desired_roles_items = " | ".join(project['desired_roles']) if isinstance(project['desired_roles'], list) else project['desired_roles']
 
-    <p><strong>Description:</strong><br>{project['description']}</p>
+        with tech_stack:
+            st.markdown(f"<small>:orange[Tech Stack]: </small></br> <small style='margin:0'>{tech_stack_items}</small>", unsafe_allow_html=True)
 
-    <p><strong>Tech Stack:</strong> {tech_stack}</p>
-
-    <p><strong>Desired Roles:</strong> {desired_roles}</p>
-
-    <p><strong>Open to Collaboration:</strong> {"✅ Yes" if project['is_open_to_collab'] else "❌ No"}</p>
-
-    <p><strong>Collaborators:</strong> {collaborators}</p>
-
-    <p>
-        🔗 <a href="{project['github_url']}" target="_blank" style="color: #4f46e5; font-weight: bold;">GitHub Repository</a>
-    </p>
-    """, unsafe_allow_html=True)
-
-    # Center the Join Project button
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("🚀 Join This Project"):
-            st.success("You've requested to join this project!")
+        with desired_roles:
+            st.markdown(f"<small>:orange[Desired Roles:]</small> </br> <small style='margin:0'>{desired_roles_items}</small>", unsafe_allow_html=True)
 
 
+        # projet github link
+        project_link = f"[GitHub](project['github_url'])"
 
+        # collab status
+        collab_status = collab_status = "green-badge[:material/handshake: Open to Collab]"
+        if not project['is_open_to_collab']:
+            collab_status = "grey-badge[:material/handshake: Closed to Collab]"
 
+        st.markdown(
+            f"""
+            :violet-badge[:material/deployed_code_account: {project['owner']}] 
+            :blue-badge[:material/fork_right: {project_link}] 
+            :{collab_status}
+            :orange-badge[:material/groups: Current Members{len(project['collaborators'])}] 
+            """
+
+        )
+
+        btn1,btn2,btn3 = st.columns(3)
+        with btn2:
+            if project['is_open_to_collab']:
+                st.button("Join Project", type="tertiary", icon=":material/rocket_launch:", use_container_width=True, key=f"btn_{project['id']}")

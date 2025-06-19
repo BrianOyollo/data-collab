@@ -83,7 +83,8 @@ if st.user.is_logged_in:
             "collab_status": st.session_state.get("new_project_collab_status", ""),
             "desired_roles": st.session_state.get("new_project_desired_roles", []),
             "github_link": st.session_state.get("new_project_github_link", "").strip(),
-            "owner": st.user.email  # or st.user.name or any identifier for the logged-in user
+            "owner": st.user.name,
+            "owner_email":st.user.email
         }
         if st.session_state.get("new_project_collab_status") == "Maybe Later":
             new_project_data['desired_roles'] = None

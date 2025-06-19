@@ -1,5 +1,7 @@
 import streamlit as st
 from sqlalchemy import text
+from utils import utils
+
 conn = st.connection("sql")
 
 st.subheader("New Project")
@@ -51,21 +53,9 @@ def create_project_form():
 if st.user.is_logged_in:
     create_project = create_project_form()
     if create_project:
-        new_project_data = {
-            "title": st.session_state.get("new_project_project_title", "").strip(),
-            "description": st.session_state.get("new_project_project_description", "").strip(),
-            "tech_stack": st.session_state.get("new_project_tech_stack", []),
-            "collab_status": st.session_state.get("new_project_collab_status", ""),
-            "desired_roles": st.session_state.get("new_project_desired_roles", []),
-            "github_link": st.session_state.get("new_project_github_link", "").strip(),
-            "owner": st.user.name,
-            "owner_email":st.user.email
-        }
-        if st.session_state.get("new_project_collab_status") == "Maybe Later":
-            new_project_data['desired_roles'] = None
-
-        st.success("🎉 Project created!")
-        st.json(new_project_data)
-
+        utils.create_project(conn)
+        
 else:
     st.warning("You must login first to create a project")
+
+

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS data_collab.users (
     name TEXT,
     email TEXT UNIQUE NOT NULL,
     profile_image TEXT,
-    provider TEXT DEFAULT 'google',
+    provider TEXT DEFAULT 'google', -- incase another provider is added
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -48,24 +48,24 @@ CREATE TABLE IF NOT EXISTS data_collab.projects (
 
 -- project - tech stack
 CREATE TABLE IF NOT EXISTS data_collab.project_tech_stack (
-    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-    tech_stack_id INTEGER REFERENCES tech_stack(id) ON DELETE CASCADE,
+    project_id INTEGER REFERENCES data_collab.projects(id) ON DELETE CASCADE,
+    tech_stack_id INTEGER REFERENCES data_collab.tech_stack(id) ON DELETE CASCADE,
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (project_id, tech_stack_id)
 );
 
 -- project - desired collaborations(roles)
 CREATE TABLE IF NOT EXISTS data_collab.project_roles (
-    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-    role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+    project_id INTEGER REFERENCES data_collab.projects(id) ON DELETE CASCADE,
+    role_id INTEGER REFERENCES data_collab.roles(id) ON DELETE CASCADE,
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (project_id, role_id)
 );
 
 -- project - project categories
 CREATE TABLE IF NOT EXISTS data_collab.project_categories (
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+    project_id INTEGER NOT NULL REFERENCES data_collab.projects(id) ON DELETE CASCADE,
+    category_id INTEGER REFERENCES data_collab.categories(id) ON DELETE CASCADE,
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (project_id, category_id)
 );
@@ -73,10 +73,8 @@ CREATE TABLE IF NOT EXISTS data_collab.project_categories (
 -- project - collaborators
 CREATE TABLE IF NOT EXISTS data_collab.project_collaborators (
     id SERIAL PRIMARY KEY,
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    first_name TEXT NOT NULL,
-    last_name TEXT,
-    user_email TEXT NOT NULL,
+    project_id INTEGER NOT NULL REFERENCES data_collab.projects(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES data_collab.users(id) ON DELETE CASCADE,
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(project_id, user_email)
+    UNIQUE(project_id, user_id)
 );

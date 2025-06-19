@@ -1,63 +1,38 @@
 import streamlit as st
+from sqlalchemy import text
+conn = st.connection("sql")
 
 st.subheader("New Project")
 
 
 
+
 def create_project_form():
-    tech_stack = [
-        "Python", "SQL", "Apache Airflow", "Apache Spark", "Kafka", "dbt",
-        "Pandas", "PostgreSQL", "MySQL", "MongoDB", "Snowflake", "BigQuery",
-        "Redshift", "Delta Lake", "AWS S3", "AWS Glue", "Azure Data Factory",
-        "Google Cloud Storage", "Docker", "Terraform", "scikit-learn",
-        "TensorFlow", "PyTorch", "XGBoost", "LightGBM", "Keras", "Transformers",
-        "spaCy", "Hugging Face", "MLflow", "Optuna", "NumPy", "Matplotlib",
-        "Seaborn", "ONNX", "FastAI", "Excel", "Google Sheets", "Power BI",
-        "Tableau", "Metabase", "Looker", "Jupyter Notebooks", "R",
-        "Google Data Studio", "Pivot Tables", "Exploratory Data Analysis",
-        "Statistics", "Dash", "Altair", "ggplot2", "D3.js", "Bokeh", "Chart.js",
-        "Superset", "ECharts", "AWS", "GCP", "Azure", "Kubernetes", "Git",
-        "GitHub Actions", "Prefect", "Airbyte", "Great Expectations", "Others"
-    ]
-    roles = [
-        "Data Engineer",
-        "Machine Learning Engineer",
-        "Data Scientist",
-        "Data Analyst",
-        "Business Intelligence Analyst",
-        "Research Scientist",
-        "AI Engineer",
-        "MLOps Engineer",
-        "Model Deployment Engineer",
-        "Cloud Data Engineer",
-        "Database Administrator",
-        "ETL Developer",
-        "Data Architect",
-        "Data Platform Engineer",
-        "Big Data Engineer",
-        "Quantitative Analyst",
-        "Data Visualization Specialist",
-        "BI Developer",
-        "Product Analyst",
-        "Statistician",
-        "Decision Scientist",
-        "Analytics Engineer",
-        "Deep Learning Engineer",
-        "Computer Vision Engineer",
-        "NLP Engineer",
-        "AI Researcher",
-        "Data Quality Analyst",
-        "Data Governance Specialist",
-        "Data Strategist",
-        "DevOps Engineer (Data/ML Focus)"
-    ]
+    project_categories = []
+    tech_stack = []
+    roles = []
+    with conn.session as session:
+        # tech stacks
+        project_categories_results = session.execute(text("SELECT name FROM data_collab.categories")).fetchall()
+        project_categories = [row[0] for row in project_categories_results]
+
+        # tech stacks
+        tech_stack_results = session.execute(text("SELECT name FROM data_collab.tech_stack")).fetchall()
+        tech_stacks = [row[0] for row in tech_stack_results]
+
+        # desired collaborations
+        roles_results = session.execute(text("SELECT name FROM data_collab.roles")).fetchall()
+        roles = [row[0] for row in roles_results]
 
     with st.form("New Project"):
         title = st.text_input("Title:", key="new_project_project_title")
         description = st.text_area("Description", key="new_project_project_description")
+
+        with st.expander("Project Category(s)"):
+            st.pills("The project involves", options=project_categories,selection_mode="multi", key="new_project_project_categories")
         
         with st.expander("Tech Stack"):
-            st.pills("The project will use...", options=tech_stack,selection_mode="multi", key="new_project_tech_stack")
+            st.pills("The project will use...", options=tech_stacks,selection_mode="multi", key="new_project_tech_stack")
         
         collab_status = st.radio(
             "Are you open to collaborations?",

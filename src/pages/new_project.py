@@ -54,6 +54,7 @@ if st.user.is_logged_in:
     create_project = create_project_form()
     if create_project:
         utils.create_project(conn)
+        st.switch_page("pages/projects.py")
         
 else:
     st.warning("You must login first to create a project")

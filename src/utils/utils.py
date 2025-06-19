@@ -61,7 +61,8 @@ def create_project(conn):
         "desired_roles": st.session_state.get("new_project_desired_roles", []),
         "github_link": st.session_state.get("new_project_github_link", "").strip(),
         "owner": user["name"],
-        "owner_email":user["email"]
+        "owner_email":user["email"],
+        "owner_id":user["id"]
     }
     if project_data["collab_status"] == "Maybe Later":
         project_data['desired_roles'] = None
@@ -69,8 +70,8 @@ def create_project(conn):
         with conn.session as session:
             # insert into projects
             projects_query = text(
-                """INSERT INTO data_collab.projects(title,description,github_url,is_open_to_collab,owner_name,owner_email)
-                VALUES(:title, :description, :github_url, :is_open_to_collab, :owner_name, :owner_email)
+                """INSERT INTO data_collab.projects(title,description,github_url,is_open_to_collab,owner_id)
+                VALUES(:title, :description, :github_url, :is_open_to_collab, :owner_id)
                 RETURNING id;
             """)
             result = session.execute(projects_query, {
@@ -78,8 +79,7 @@ def create_project(conn):
                 "description": project_data["description"],
                 "github_url": project_data["github_link"],
                 "is_open_to_collab": project_data["collab_status"] == "Yes",
-                "owner_name": project_data["owner"],
-                "owner_email": project_data["owner_email"],
+                "owner_id": project_data["owner_id"],
             })
             project_id = result.scalar()
 
@@ -115,3 +115,31 @@ def create_project(conn):
             st.balloons()
     except Exception as e:
         raise
+
+
+def fetch_projects(conn):
+    query = text("""
+        SELECT
+            p.id, p.title,p.description,p.github_url,p.is_open_to_collab, p.time_created,p.time_updated,
+            u.name AS owner,
+            u.email,
+            ARRAY_AGG(DISTINCT c.name) AS categories,
+            ARRAY_AGG(DISTINCT ts.name) AS tech_stack,
+            ARRAY_AGG(DISTINCT r.name) AS desired_roles,
+            COUNT(DISTINCT collab.user_id) AS collaborators
+        FROM data_collab.projects p
+        LEFT JOIN data_collab.project_categories pc ON pc.project_id=p.id
+        LEFT JOIN data_collab.project_tech_stack pts ON pts.project_id=p.id
+        LEFT JOIN data_collab.project_roles pr ON pr.project_id=p.id
+        LEFT JOIN data_collab.project_collaborators collab ON collab.project_id=p.id
+        LEFT JOIN data_collab.users u ON p.owner_id=u.id
+        LEFT JOIN data_collab.categories c ON c.id=pc.category_id
+        LEFT JOIN data_collab.tech_stack ts ON ts.id=pts.tech_stack_id
+        LEFT JOIN data_collab.roles r ON r.id=pr.role_id
+        GROUP BY p.id, u.name,u.email
+        ORDER BY p.time_created DESC;
+    """)
+    with conn.session as session:
+        results = session.execute(query).fetchall()
+
+    return results

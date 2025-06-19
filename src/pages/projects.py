@@ -1,94 +1,92 @@
 import streamlit as st
 from html import escape
+
 from utils import utils
 
+conn = st.connection("sql")
 
-
-
-st.subheader(f"Projects(37)")
-
-
-
-
-
-dummy_projects = [
+projects = [row._mapping for row in utils.fetch_projects(conn)]
+st.subheader(f"Projects({len(projects)})")
+comments_data = [
     {
-        "id":1,
-        "category": "Data Visualization",
-        "title": "Interactive Dashboard for Airbnb Listings with Artificial Intelligence",
-        "description": "We are building an interactive dashboard to visualize Airbnb listings by city, room type, and price range using the anonymized OpenDataSoft dataset. The dashboard will allow filtering by various parameters and map-based visualizations with Leaflet or Mapbox.",
-        "tech_stack": ["JavaScript", "React", "D3.js", "Mapbox", "Flask"],
-        "github_url": "https://github.com/boyollo/airbnb-dashboard",
-        "is_open_to_collab": True,
-        "desired_roles": ["Frontend Developer", "Data Visualization Specialist", "UX Designer"],
-        "owner": "Brian Oyollo",
-        "collaborators": ["John Ouma", "Fatima Elmi"]
+        "name": "Brian",
+        "message": "Hey, nice project. I want in",
+        "time": "8.46pm"
     },
     {
-        "id":2,
-        "category": "Artificial Intelligence",
-        "title": "AI Resume-to-Job Matching System",
-        "description": "This project builds an AI system that takes resumes and job descriptions and predicts the best matches based on skill overlap, experience, and role requirements. It uses NLP techniques and vector similarity to rank candidate-job pairs.",
-        "tech_stack": ["Python", "spaCy", "HuggingFace Transformers", "FastAPI", "PostgreSQL"],
-        "github_url": "https://github.com/boyollo/ai-resume-matcher",
-        "is_open_to_collab": True,
-        "desired_roles": ["NLP Engineer", "Backend Developer", "HR Tech Enthusiast"],
-        "owner": "Brian Oyollo",
-        "collaborators": ["Aisha Noor", "Kelvin Otieno"]
+        "name": "Aisha",
+        "message": "This looks promising. Do you still need a frontend developer?",
+        "time": "9.02pm"
     },
     {
-        "id":3,
-        "category": "Climate Tech",
-        "title": "Global Climate Trends Dashboard",
-        "description": "An open-source dashboard visualizing temperature anomalies, CO₂ levels, and climate events globally using public datasets from NASA and NOAA. The goal is to build public awareness around climate change through compelling, interactive visuals.",
-        "tech_stack": ["Python", "Dash", "Plotly", "GeoPandas", "Docker"],
-        "github_url": "https://github.com/boyollo/climate-trends-dashboard",
-        "is_open_to_collab": False,
-        "desired_roles": ["Data Scientist", "Frontend Developer", "Environmental Analyst"],
-        "owner": "Brian Oyollo",
-        "collaborators": ["Chloe Mwangi", "Victor Ndeti"]
+        "name": "Kelvin",
+        "message": "I'm interested in the data analysis part. Let me know how I can contribute.",
+        "time": "9.15pm"
     },
     {
-        "id":4,
-        "category": "Data Visualization",
-        "title": "Interactive Dashboard for Airbnb Listings",
-        "description": "We are building an interactive dashboard to visualize Airbnb listings by city, room type, and price range using the anonymized OpenDataSoft dataset. The dashboard will allow filtering by various parameters and map-based visualizations with Leaflet or Mapbox.",
-        "tech_stack": ["JavaScript", "React", "D3.js", "Mapbox", "Flask"],
-        "github_url": "https://github.com/boyollo/airbnb-dashboard",
-        "is_open_to_collab": True,
-        "desired_roles": ["Frontend Developer", "Data Visualization Specialist", "UX Designer"],
-        "owner": "John Doe",
-        "collaborators": ["John Ouma", "Fatima Elmi"]
+        "name": "Chloe",
+        "message": "Impressive work so far! Can I join as a designer?",
+        "time": "9.30pm"
     },
     {
-        "id":5,
-        "category": "Artificial Intelligence",
-        "title": "AI Resume-to-Job Matching System",
-        "description": "This project builds an AI system that takes resumes and job descriptions and predicts the best matches based on skill overlap, experience, and role requirements. It uses NLP techniques and vector similarity to rank candidate-job pairs.",
-        "tech_stack": ["Python", "spaCy", "HuggingFace Transformers", "FastAPI", "PostgreSQL"],
-        "github_url": "https://github.com/boyollo/ai-resume-matcher",
-        "is_open_to_collab": True,
-        "desired_roles": ["NLP Engineer", "Backend Developer", "HR Tech Enthusiast"],
-        "owner": "Jane Doe",
-        "collaborators": ["Aisha Noor", "Kelvin Otieno"]
+        "name": "David",
+        "message": "Would love to collaborate. I'm good with backend systems.",
+        "time": "9.42pm"
     },
+    {
+        "name": "Emily",
+        "message": "Count me in! I'm working on something similar.",
+        "time": "10.05pm"
+    },
+    {
+        "name": "Sam",
+        "message": "Great concept! Can I help with data visualization?",
+        "time": "10.18pm"
+    },
+    {
+        "name": "Njeri",
+        "message": "Hey, this aligns with my interests. Let's collaborate!",
+        "time": "10.33pm"
+    },
+    {
+        "name": "Ali",
+        "message": "Looks exciting. I can help with testing and QA.",
+        "time": "10.45pm"
+    },
+    {
+        "name": "Zainab",
+        "message": "Very cool project. I'm available for weekend contributions.",
+        "time": "11.00pm"
+    },
+    {
+        "name": "Omondi",
+        "message": "I've got experience with geodata. Happy to join in!",
+        "time": "11.12pm"
+    }
 ]
 
 
-for project in dummy_projects:
+
+for project in projects:
    with st.container(border=True, key=f"cont_{project['id']}"):
         st.html(f"<h5 style='margin:0'>{project['title']}</h5>")
         st.html(f"<small>{project['description']}</small>")
 
-        tech_stack, desired_roles = st.columns(2)
-        tech_stack_items = " • ".join(project['tech_stack']) if isinstance(project['tech_stack'], list) else project['tech_stack']
-        desired_roles_items = " | ".join(project['desired_roles']) if isinstance(project['desired_roles'], list) else project['desired_roles']
+        
 
+        tech_stack_items = " • ".join(str(item) for item in project.get('tech_stack') or [] if item)
+        desired_roles_items = " • ".join(str(item) for item in project.get("desired_roles") or [] if item)
+        categories = " • ".join(str(item) for item in project.get('categories') or [] if item)
+
+        tech_stack, desired_roles, project_category = st.tabs(["Tech Stack","Desired Roles","Project Categories"])
         with tech_stack:
-            st.markdown(f"<small>:orange[Tech Stack]: </small></br> <small style='margin:0'>{tech_stack_items}</small>", unsafe_allow_html=True)
+            st.markdown(f"<small style='margin:0'>{tech_stack_items}</small>", unsafe_allow_html=True)
 
         with desired_roles:
-            st.markdown(f"<small>:orange[Desired Roles:]</small> </br> <small style='margin:0'>{desired_roles_items}</small>", unsafe_allow_html=True)
+            st.markdown(f"<small style='margin:0'>{desired_roles_items}</small>", unsafe_allow_html=True)
+
+        with project_category:
+            st.markdown(f"<small style='margin:0'>{categories}</small>", unsafe_allow_html=True)
 
 
         # projet github link
@@ -104,7 +102,7 @@ for project in dummy_projects:
             :violet-badge[:material/deployed_code_account: {project['owner']}] 
             :blue-badge[:material/fork_right: {project_link}] 
             :{collab_status}
-            :orange-badge[:material/groups: Current Members{len(project['collaborators'])}] 
+            :orange-badge[:material/groups: Current Members{project['collaborators']}] 
             """
 
         )

@@ -40,8 +40,7 @@ CREATE TABLE IF NOT EXISTS data_collab.projects (
     description TEXT NOT NULL,
     github_url TEXT,
     is_open_to_collab BOOLEAN DEFAULT TRUE,
-    owner_name TEXT,
-    owner_email TEXT NOT NULL,
+    owner_id INTEGER REFERENCES data_collab.users(id) ON SET NULL,
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     time_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

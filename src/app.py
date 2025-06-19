@@ -1,4 +1,8 @@
 import streamlit as st
+from utils import utils
+
+conn = st.connection('sql')
+
 st.set_page_config(
     page_title="DataCollab",
     page_icon="🧊",
@@ -25,6 +29,9 @@ pages = {
 }
 
 if st.user.is_logged_in:
+    if "user" not in st.session_state:
+        utils.sync_user(conn, st.user)
+
     pages["Account"] = [
         st.Page("pages/profile.py", title="Profile")
     ]

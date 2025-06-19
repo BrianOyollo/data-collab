@@ -11,3 +11,4 @@ wheels/
 .env
 secrets.toml
 trial.ipynb
+*.notes

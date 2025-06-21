@@ -27,21 +27,25 @@ def sync_user(conn, user:dict):
     if not email:
         return 
     
-    with conn.session as session:
-        result = session.execute(text("SELECT * FROM data_collab.users WHERE email =:email;"), {"email":email}).fetchone()
-        if result:
-            st.session_state['user'] = result._mapping
-        else:
-            session.execute(
-                text("""INSERT INTO data_collab.users(name,email,profile_image) VALUES(:name,:email,:profile_image);"""), 
-                {"name":user['name'],"email":user['email'], "profile_image":user['picture']}
-            )
-            session.commit()
-            
-            # fetch user data
+    try:
+        with conn.session as session:
             result = session.execute(text("SELECT * FROM data_collab.users WHERE email =:email;"), {"email":email}).fetchone()
             if result:
                 st.session_state['user'] = result._mapping
+            else:
+                session.execute(
+                    text("""INSERT INTO data_collab.users(name,email,profile_image) VALUES(:name,:email,:profile_image);"""), 
+                    {"name":user['name'],"email":user['email'], "profile_image":user['picture']}
+                )
+                session.commit()
+                
+                # fetch user data
+                result = session.execute(text("SELECT * FROM data_collab.users WHERE email =:email;"), {"email":email}).fetchone()
+                if result:
+                    st.session_state['user'] = result._mapping
+        st.toast(":violet[User synced to db]", icon=":material/check:")
+    except Exception as e:
+        st.toast("Error syncing user to db", icon=":material/error")
 
 
 def create_project(conn):
@@ -67,6 +71,7 @@ def create_project(conn):
     }
     if project_data["collab_status"] == "Maybe Later":
         project_data['desired_roles'] = None
+
     try:
         with conn.session as session:
             # insert into projects
@@ -115,6 +120,7 @@ def create_project(conn):
             st.success("🎉 Project created!")
             st.balloons()
     except Exception as e:
+        st.toast(":red[Error creating project. Please try again later or contact the system admin]", icon="material/error:" )
         raise
 
 
@@ -140,25 +146,33 @@ def fetch_projects(conn):
         GROUP BY p.id, u.name,u.email
         ORDER BY p.time_created DESC;
     """)
-    with conn.session as session:
-        results = session.execute(query).fetchall()
-
-    return results
+    try:
+        with conn.session as session:
+            results = session.execute(query).fetchall()
+        return results
+    except Exception as e:
+        # log e
+        st.toast(":red[Error fetching projects. Please reload the page or contact the system admin]",icon=":material/error:" )
+        return None
 
 def is_user_collaborator(conn, project_id:int, user_id:int)->bool:
     # check is user is a project collaborator
     # returns True or False
 
-    with conn.session as session:
-        result = session.execute(
-            text("""SELECT 1 FROM data_collab.project_collaborators WHERE project_id=:project_id AND user_id=:user_id;"""),
-            {"project_id":project_id, "user_id":user_id}
-        ).fetchone()
-    return result is not None
+    try:
+        with conn.session as session:
+            result = session.execute(
+                text("""SELECT 1 FROM data_collab.project_collaborators WHERE project_id=:project_id AND user_id=:user_id;"""),
+                {"project_id":project_id, "user_id":user_id}
+            ).fetchone()
+        return result is not None
+    except Exception as e:
+        # log the error
+        return False
 
 def join_project(conn, project_id:int):
     """
-    Add user as collaborator
+    Adds logged in user as prroject collaborator
 
     Args:
         conn: SQLAlchemy connection/session context
@@ -182,3 +196,29 @@ def join_project(conn, project_id:int):
         st.toast("Aready part of the project")
     except Exception as e:
         st.toast("Looks like there's problem. Please try again later or contact your system admin")
+
+
+
+def leave_project(conn, project_id:int)->True:
+    ## removes logged in user as a project collaborator
+    ## returns True is success else false
+
+    if "user" not in st.session_state:
+        return
+    
+    user = st.session_state["user"]
+
+    try:
+        with conn.session as session:
+            result = session.execute(
+                text("DELETE FROM data_collab.project_collaborators WHERE project_id=:project_id AND user_id=:user_id;"),
+                {"project_id":project_id, "user_id":user["id"]}
+            )
+            session.commit()
+            st.toast("Request successful", icon=":material/check_small:")
+            return result.rowcount > 0
+    except Exception:
+        st.toast(":red[Error compeleting request. Please try again later or contact the system admin]", icon=":material/error")
+        raise
+
+

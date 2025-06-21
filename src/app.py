@@ -12,7 +12,6 @@ st.set_page_config(
 
 st.header(":blue[DataCollab]")
 
-
 pages = {
     "Projects":[
         st.Page("pages/projects.py", title="Projects"),

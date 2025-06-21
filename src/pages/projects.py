@@ -48,16 +48,61 @@ for project in projects:
         )
         st.write("")
         btn1,btn2,btn3 = st.columns(3)
-        with btn1:
-            st.button("Leave Project",type="tertiary", icon=":material/door_open:", use_container_width=True,key=f"leave_project_btn_{project['id']}")
-        with btn2:
+
+        # if user is logged in
+        if "user" in st.session_state:
+
+            # if user is a project collaborator
+            # show leave button
+            # otherwise join project button if project alllows collaborations
+            if utils.is_user_collaborator(conn, project['id'], st.session_state["user"]["id"]):
+                with btn2:
+                    st.button(
+                        "Leave Project",
+                        type="tertiary", 
+                        icon=":material/door_open:", 
+                        use_container_width=True
+                        ,key=f"leave_project_btn_{project['id']}"
+                    )
+            else:
+                with btn2:
+                    if project['is_open_to_collab']:
+                        join_project_btn = st.button(
+                            "Join Project", 
+                            type="tertiary", 
+                            icon=":material/rocket_launch:", 
+                            use_container_width=True, 
+                            key=f"btn_{project['id']}"
+                        )
+                        if join_project_btn:
+                            project_id = project['id']
+                            utils.join_project(conn, project_id)
+
+            # if user logged in user is project owner
+            # show delete project button 
+            if project["email"] == st.session_state["user"]["email"]:   
+                with btn3:  
+                    st.button(
+                        "Delete Project",
+                        type="tertiary", 
+                        icon=":material/delete:", 
+                        use_container_width=True, 
+                        key=f"dlt_btn_{project['id']}"
+                    )
+                    
+        # user is not logged in
+        # show join project if project is open to collaborations
+        else:
             if project['is_open_to_collab']:
-                join_project_btn = st.button("Join Project", type="tertiary", icon=":material/rocket_launch:", use_container_width=True, key=f"btn_{project['id']}")
-                if join_project_btn:
-                    project_id = project['id']
-                    user_id = st.session_state["user"]["id"]
-                    utils.join_project(conn, project_id, user_id)
-        with btn3:
-            if project["email"] == st.session_state["user"]["email"]:
-                st.button("Delete Project",type="tertiary", icon=":material/delete:", use_container_width=True, key=f"dlt_btn_{project['id']}")
-    
+                with btn2:
+                    join_project_btn = st.button(
+                        "Join Project", 
+                        type="tertiary", 
+                        icon=":material/rocket_launch:", 
+                        use_container_width=True, 
+                        key=f"btn_{project['id']}"
+                    )
+                    if join_project_btn:
+                        project_id = project['id']
+                        utils.join_project(conn, project_id)
+

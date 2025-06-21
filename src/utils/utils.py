@@ -1,5 +1,6 @@
 import streamlit as st
-from sqlalchemy import text
+from sqlalchemy import text,exc
+
 
 def create_user(conn, user:dict):
     """
@@ -144,8 +145,18 @@ def fetch_projects(conn):
 
     return results
 
+def is_user_collaborator(conn, project_id:int, user_id:int)->bool:
+    # check is user is a project collaborator
+    # returns True or False
 
-def join_project(conn, project_id:int, user_id:int):
+    with conn.session as session:
+        result = session.execute(
+            text("""SELECT 1 FROM data_collab.project_collaborators WHERE project_id=:project_id AND user_id=:user_id;"""),
+            {"project_id":project_id, "user_id":user_id}
+        ).fetchone()
+    return result is not None
+
+def join_project(conn, project_id:int):
     """
     Add user as collaborator
 
@@ -154,14 +165,20 @@ def join_project(conn, project_id:int, user_id:int):
         project_id (int): project id
         user_id (int): user id
     """
-    if not user_id:
-        st.toast("You must login to join a project")
+    if not "user" in st.session_state:
+        st.toast(":red[You must login to join a project]", icon=":material/block:")
         return
-
-    with conn.session as session:
-        session.execute(text(
-            """INSERT INTO data_collab.project_collaborators(project_id,user_id)
-            VALUES(:project_id, :user_id)"""), {"project_id":project_id, "user_id":user_id}
-        )
-        session.commit()
-        st.toast("Done! Happy coding!")
+    
+    user_id = st.session_state["user"]["id"]
+    try:
+        with conn.session as session:
+            session.execute(text(
+                """INSERT INTO data_collab.project_collaborators(project_id,user_id)
+                VALUES(:project_id, :user_id)"""), {"project_id":project_id, "user_id":user_id}
+            )
+            session.commit()
+            st.toast(":green[Done! Happy coding!]", icon=":material/celebration:")
+    except exc.IntegrityError:
+        st.toast("Aready part of the project")
+    except Exception as e:
+        st.toast("Looks like there's problem. Please try again later or contact your system admin")

@@ -143,3 +143,25 @@ def fetch_projects(conn):
         results = session.execute(query).fetchall()
 
     return results
+
+
+def join_project(conn, project_id:int, user_id:int):
+    """
+    Add user as collaborator
+
+    Args:
+        conn: SQLAlchemy connection/session context
+        project_id (int): project id
+        user_id (int): user id
+    """
+    if not user_id:
+        st.toast("You must login to join a project")
+        return
+
+    with conn.session as session:
+        session.execute(text(
+            """INSERT INTO data_collab.project_collaborators(project_id,user_id)
+            VALUES(:project_id, :user_id)"""), {"project_id":project_id, "user_id":user_id}
+        )
+        session.commit()
+        st.toast("Done! Happy coding!")

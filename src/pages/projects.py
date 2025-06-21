@@ -7,64 +7,6 @@ conn = st.connection("sql")
 
 projects = [row._mapping for row in utils.fetch_projects(conn)]
 st.subheader(f"Projects({len(projects)})")
-comments_data = [
-    {
-        "name": "Brian",
-        "message": "Hey, nice project. I want in",
-        "time": "8.46pm"
-    },
-    {
-        "name": "Aisha",
-        "message": "This looks promising. Do you still need a frontend developer?",
-        "time": "9.02pm"
-    },
-    {
-        "name": "Kelvin",
-        "message": "I'm interested in the data analysis part. Let me know how I can contribute.",
-        "time": "9.15pm"
-    },
-    {
-        "name": "Chloe",
-        "message": "Impressive work so far! Can I join as a designer?",
-        "time": "9.30pm"
-    },
-    {
-        "name": "David",
-        "message": "Would love to collaborate. I'm good with backend systems.",
-        "time": "9.42pm"
-    },
-    {
-        "name": "Emily",
-        "message": "Count me in! I'm working on something similar.",
-        "time": "10.05pm"
-    },
-    {
-        "name": "Sam",
-        "message": "Great concept! Can I help with data visualization?",
-        "time": "10.18pm"
-    },
-    {
-        "name": "Njeri",
-        "message": "Hey, this aligns with my interests. Let's collaborate!",
-        "time": "10.33pm"
-    },
-    {
-        "name": "Ali",
-        "message": "Looks exciting. I can help with testing and QA.",
-        "time": "10.45pm"
-    },
-    {
-        "name": "Zainab",
-        "message": "Very cool project. I'm available for weekend contributions.",
-        "time": "11.00pm"
-    },
-    {
-        "name": "Omondi",
-        "message": "I've got experience with geodata. Happy to join in!",
-        "time": "11.12pm"
-    }
-]
-
 
 
 for project in projects:
@@ -72,13 +14,11 @@ for project in projects:
         st.html(f"<h5 style='margin:0'>{project['title']}</h5>")
         st.html(f"<small>{project['description']}</small>")
 
-        
-
         tech_stack_items = " • ".join(str(item) for item in project.get('tech_stack') or [] if item)
         desired_roles_items = " • ".join(str(item) for item in project.get("desired_roles") or [] if item)
         categories = " • ".join(str(item) for item in project.get('categories') or [] if item)
 
-        tech_stack, desired_roles, project_category = st.tabs(["Tech Stack","Desired Roles","Project Categories"])
+        tech_stack, desired_roles, project_category = st.tabs(["Tech Stack","Looking to collab with","Project Categories"])
         with tech_stack:
             st.markdown(f"<small style='margin:0'>{tech_stack_items}</small>", unsafe_allow_html=True)
 
@@ -102,12 +42,22 @@ for project in projects:
             :violet-badge[:material/deployed_code_account: {project['owner']}] 
             :blue-badge[:material/fork_right: {project_link}] 
             :{collab_status}
-            :orange-badge[:material/groups: Current Members{project['collaborators']}] 
+            :orange-badge[:material/groups: Current Members: {project['collaborators']}] 
             """
 
         )
-
+        st.write("")
         btn1,btn2,btn3 = st.columns(3)
+        with btn1:
+            st.button("Leave Project",type="tertiary", icon=":material/door_open:", use_container_width=True,key=f"leave_project_btn_{project['id']}")
         with btn2:
             if project['is_open_to_collab']:
-                st.button("Join Project", type="tertiary", icon=":material/rocket_launch:", use_container_width=True, key=f"btn_{project['id']}")
+                join_project_btn = st.button("Join Project", type="tertiary", icon=":material/rocket_launch:", use_container_width=True, key=f"btn_{project['id']}")
+                if join_project_btn:
+                    project_id = project['id']
+                    user_id = st.session_state["user"]["id"]
+                    utils.join_project(conn, project_id, user_id)
+        with btn3:
+            if project["email"] == st.session_state["user"]["email"]:
+                st.button("Delete Project",type="tertiary", icon=":material/delete:", use_container_width=True, key=f"dlt_btn_{project['id']}")
+    

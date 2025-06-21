@@ -1,4 +1,8 @@
 import streamlit as st
+from menu import menu
+
+
+menu()
 
 if st.user.is_logged_in:
     if st.session_state["user"]:

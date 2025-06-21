@@ -84,7 +84,7 @@ def project_fragement(conn, project):
 
         st.markdown(
             f"""
-            :violet-badge[:material/deployed_code_account: {project['owner']}] 
+            :violet-badge[:material/deployed_code_account: {project['owner_name']}] 
             :blue-badge[:material/fork_right: {project_link}] 
             :{collab_status}
             :orange-badge[:material/groups: Current Members: {project['collaborators']}] 
@@ -120,7 +120,7 @@ def project_fragement(conn, project):
                             type="tertiary", 
                             icon=":material/rocket_launch:", 
                             use_container_width=True, 
-                            key=f"btn_{project['id']}"
+                            key=f"join_project_btn_{project['id']}"
                         )
                         if join_project_btn:
                             project_id = project['id']
@@ -129,14 +129,25 @@ def project_fragement(conn, project):
 
             # if user logged in user is project owner
             # show delete project button 
-            if project["email"] == st.session_state["user"]["email"]:   
+            if project["owner_email"] == st.session_state["user"]["email"]: 
+                with btn1:
+                    edit_project_btn = st.button(
+                        "Edit Project",
+                        type="tertiary",
+                        icon=":material/edit_square:",
+                        use_container_width=True,
+                        key=f"edit_project_btn_{project["id"]}"
+                    )
+                    if edit_project_btn:
+                        st.switch_page("pages/new_project.py")
+
                 with btn3:  
                     delete_project_btn = st.button(
                         "Delete Project",
                         type="tertiary", 
                         icon=":material/delete:", 
                         use_container_width=True, 
-                        key=f"dlt_btn_{project['id']}"
+                        key=f"dlt_project_btn_{project['id']}"
                     )
                     if delete_project_btn:
                         delete_project(conn, project["id"])
@@ -216,7 +227,7 @@ def create_project(conn):
                 project_roles_query = text("""
                     INSERT INTO data_collab.project_roles(project_id, role_id)
                     SELECT :project_id, id FROM data_collab.roles r
-                    WHERE r.name = ANY(:desired_roles)
+                    WHERE r.name = ANY(:desired_roles);
                 """)
                 session.execute(project_roles_query,{"project_id":project_id, "desired_roles":project_data['desired_roles']})
 
@@ -225,9 +236,15 @@ def create_project(conn):
                 project_categories_query = text("""
                     INSERT INTO data_collab.project_categories(project_id, category_id) 
                     SELECT :project_id, id FROM data_collab.categories c 
-                    WHERE c.name = ANY(:project_categories)""")
+                    WHERE c.name = ANY(:project_categories);""")
                 session.execute(project_categories_query,{"project_id":project_id, "project_categories":project_data["project_categories"]})
 
+            # insert into project_collaborators
+            project_collaborators_query = text("""
+                INSERT INTO data_collab.project_collaborators(project_id, user_id)
+                VALUES(:project_id,:user_id);""")
+            session.execute(project_collaborators_query, {"project_id":project_id, "user_id":project_data["owner_id"]})
+            
             # commit everything
             session.commit()
             st.success("🎉 Project created!")
@@ -241,8 +258,8 @@ def fetch_projects(conn):
     query = text("""
         SELECT
             p.id, p.title,p.description,p.github_url,p.is_open_to_collab, p.time_created,p.time_updated,
-            u.name AS owner,
-            u.email,
+            u.name AS owner_name,
+            u.email AS owner_email,
             ARRAY_AGG(DISTINCT c.name) AS categories,
             ARRAY_AGG(DISTINCT ts.name) AS tech_stack,
             ARRAY_AGG(DISTINCT r.name) AS desired_roles,
@@ -358,7 +375,7 @@ def delete_project(conn, project_id:int)->True:
                 session.commit()
                 message = {"text":"Well, it was fun while it lasted. Create a new one soon", "icon":":material/check_small:"}
                 add_session_state_msg(message)
-                st.rerun()
+                st.switch_page("pages/projects.py")
                 
 
         except Exception:

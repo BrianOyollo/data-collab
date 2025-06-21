@@ -1,13 +1,14 @@
 import streamlit as st
 from sqlalchemy import text
 from utils import utils
+from menu import menu
 
 conn = st.connection("sql")
 
+st.sidebar.markdown("# :blue[DataCollab]")
+menu()
+
 st.subheader("New Project")
-
-
-
 
 def create_project_form():
     project_categories = []

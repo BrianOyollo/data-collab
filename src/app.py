@@ -1,5 +1,6 @@
 import streamlit as st
 from utils import utils
+import time
 
 conn = st.connection('sql')
 
@@ -9,6 +10,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# will run on st.rerun()
+if "ss_message" in st.session_state:
+    message = st.session_state["ss_message"]
+    if message is not None:
+        st.toast(message["text"], icon=f'{message["icon"]}')
+        time.sleep(4)
+        st.session_state["ss_message"] = None
 
 st.header(":blue[DataCollab]")
 

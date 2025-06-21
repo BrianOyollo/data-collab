@@ -1,6 +1,11 @@
 import streamlit as st
 from sqlalchemy import text,exc
+import time
 
+def add_session_state_msg(msg:dict):
+    # adds messages to session state
+    # used to go around st.reruns()
+    st.session_state["ss_message"] = msg
 
 def create_user(conn, user:dict):
     """
@@ -46,6 +51,114 @@ def sync_user(conn, user:dict):
         st.toast(":violet[User synced to db]", icon=":material/check:")
     except Exception as e:
         st.toast("Error syncing user to db", icon=":material/error")
+
+
+@st.fragment
+def project_fragement(conn, project):
+    with st.container(border=True, key=f"cont_{project['id']}"):
+        st.html(f"<h5 style='margin:0'>{project['title']}</h5>")
+        st.html(f"<small>{project['description']}</small>")
+
+        tech_stack_items = " • ".join(str(item) for item in project.get('tech_stack') or [] if item)
+        desired_roles_items = " • ".join(str(item) for item in project.get("desired_roles") or [] if item)
+        categories = " • ".join(str(item) for item in project.get('categories') or [] if item)
+
+        tech_stack, desired_roles, project_category = st.tabs(["Tech Stack","Looking to collab with","Project Categories"])
+        with tech_stack:
+            st.markdown(f"<small style='margin:0'>{tech_stack_items}</small>", unsafe_allow_html=True)
+
+        with desired_roles:
+            st.markdown(f"<small style='margin:0'>{desired_roles_items}</small>", unsafe_allow_html=True)
+
+        with project_category:
+            st.markdown(f"<small style='margin:0'>{categories}</small>", unsafe_allow_html=True)
+
+
+        # projet github link
+        project_link = f"[GitHub](project['github_url'])"
+
+        # collab status
+        collab_status = collab_status = "green-badge[:material/handshake: Open to Collab]"
+        if not project['is_open_to_collab']:
+            collab_status = "grey-badge[:material/handshake: Closed to Collab]"
+
+        st.markdown(
+            f"""
+            :violet-badge[:material/deployed_code_account: {project['owner']}] 
+            :blue-badge[:material/fork_right: {project_link}] 
+            :{collab_status}
+            :orange-badge[:material/groups: Current Members: {project['collaborators']}] 
+            """
+
+        )
+        st.write("")
+        btn1,btn2,btn3 = st.columns(3)
+
+        # if user is logged in
+        if "user" in st.session_state:
+
+            # if user is a project collaborator
+            # show leave button
+            # otherwise join project button if project alllows collaborations
+            if is_user_collaborator(conn, project['id'], st.session_state["user"]["id"]):
+                with btn2:
+                    leave_project_btn = st.button(
+                        "Leave Project",
+                        type="tertiary", 
+                        icon=":material/door_open:", 
+                        use_container_width=True
+                        ,key=f"leave_project_btn_{project['id']}"
+                    )
+                    if leave_project_btn:
+                        leave_project(conn,project["id"])
+                        
+            else:
+                with btn2:
+                    if project['is_open_to_collab']:
+                        join_project_btn = st.button(
+                            "Join Project", 
+                            type="tertiary", 
+                            icon=":material/rocket_launch:", 
+                            use_container_width=True, 
+                            key=f"btn_{project['id']}"
+                        )
+                        if join_project_btn:
+                            project_id = project['id']
+                            join_project(conn, project_id)
+                            
+
+            # if user logged in user is project owner
+            # show delete project button 
+            if project["email"] == st.session_state["user"]["email"]:   
+                with btn3:  
+                    delete_project_btn = st.button(
+                        "Delete Project",
+                        type="tertiary", 
+                        icon=":material/delete:", 
+                        use_container_width=True, 
+                        key=f"dlt_btn_{project['id']}"
+                    )
+                    if delete_project_btn:
+                        delete_project(conn, project["id"])
+                        
+                        
+
+        # user is not logged in
+        # show join project if project is open to collaborations
+        else:
+            if project['is_open_to_collab']:
+                with btn2:
+                    join_project_btn = st.button(
+                        "Join Project", 
+                        type="tertiary", 
+                        icon=":material/rocket_launch:", 
+                        use_container_width=True, 
+                        key=f"btn_{project['id']}"
+                    )
+                    if join_project_btn:
+                        project_id = project['id']
+                        join_project(conn, project_id)
+
 
 
 def create_project(conn):
@@ -192,6 +305,8 @@ def join_project(conn, project_id:int):
             )
             session.commit()
             st.toast(":green[Done! Happy coding!]", icon=":material/celebration:")
+            st.rerun(scope="fragment")
+
     except exc.IntegrityError:
         st.toast("Aready part of the project")
     except Exception as e:
@@ -215,6 +330,7 @@ def leave_project(conn, project_id:int)->True:
             )
             session.commit()
             st.toast("Request successful", icon=":material/check_small:")
+            st.rerun(scope="fragment")
 
     except Exception:
         st.toast(":red[Error compeleting request. Please try again later or contact the system admin]", icon=":material/error:")
@@ -235,15 +351,18 @@ def delete_project(conn, project_id:int)->True:
     if st.button("Delete Project"):
         try:
             with conn.session as session:
-                result = session.execute(
+                session.execute(
                     text("DELETE FROM data_collab.projects WHERE id=:project_id AND owner_id=:user_id;"),
                     {"project_id":project_id, "user_id":user["id"]}
                 )
                 session.commit()
-                st.toast("Well, it was fun while it lasted. Create a new one soon", icon=":material/check_small:")
-                return result.rowcount > 0
+                message = {"text":"Well, it was fun while it lasted. Create a new one soon", "icon":":material/check_small:"}
+                add_session_state_msg(message)
+                st.rerun()
+                
+
         except Exception:
             st.toast(":red[Error compeleting request. Please try again later or contact the system admin]", icon=":material/error:")
-            # log error
+            raise
 
 

@@ -54,6 +54,10 @@ if st.user.is_logged_in:
     create_project = create_project_form()
     if create_project:
         utils.create_project(conn)
+        utils.add_session_state_msg({
+            "text":":green[Project successfully created]",
+            "icon":":material/celebration:"
+        })
         st.switch_page("pages/projects.py")
         
 else:

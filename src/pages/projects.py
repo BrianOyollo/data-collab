@@ -87,13 +87,15 @@ if project_results is not None:
                     # show delete project button 
                     if project["email"] == st.session_state["user"]["email"]:   
                         with btn3:  
-                            st.button(
+                            delete_project_btn = st.button(
                                 "Delete Project",
                                 type="tertiary", 
                                 icon=":material/delete:", 
                                 use_container_width=True, 
                                 key=f"dlt_btn_{project['id']}"
                             )
+                            if delete_project_btn:
+                                utils.delete_project(conn, project["id"])
 
                 # user is not logged in
                 # show join project if project is open to collaborations
@@ -111,6 +113,6 @@ if project_results is not None:
                                 project_id = project['id']
                                 utils.join_project(conn, project_id)
 
-
-st.subheader(f"Projects()")
-st.info("There are no projects to display right now")
+else:
+    st.subheader(f"Projects()")
+    st.info("There are no projects to display right now")

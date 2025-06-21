@@ -201,7 +201,6 @@ def join_project(conn, project_id:int):
 
 def leave_project(conn, project_id:int)->True:
     ## removes logged in user as a project collaborator
-    ## returns True is success else false
 
     if "user" not in st.session_state:
         return
@@ -216,9 +215,35 @@ def leave_project(conn, project_id:int)->True:
             )
             session.commit()
             st.toast("Request successful", icon=":material/check_small:")
-            return result.rowcount > 0
+
     except Exception:
-        st.toast(":red[Error compeleting request. Please try again later or contact the system admin]", icon=":material/error")
+        st.toast(":red[Error compeleting request. Please try again later or contact the system admin]", icon=":material/error:")
         raise
+
+@st.dialog("Delete Project")
+def delete_project(conn, project_id:int)->True:
+    ## deletes project if logged in user is the project owner
+
+    if "user" not in st.session_state:
+        return
+    
+    st.write(":red[Are you sure you want to delete this project? There might be active collaborators]")
+    st.write("If you aren't sure, please hit cancel")
+
+    user = st.session_state["user"]
+
+    if st.button("Delete Project"):
+        try:
+            with conn.session as session:
+                result = session.execute(
+                    text("DELETE FROM data_collab.projects WHERE id=:project_id AND owner_id=:user_id;"),
+                    {"project_id":project_id, "user_id":user["id"]}
+                )
+                session.commit()
+                st.toast("Well, it was fun while it lasted. Create a new one soon", icon=":material/check_small:")
+                return result.rowcount > 0
+        except Exception:
+            st.toast(":red[Error compeleting request. Please try again later or contact the system admin]", icon=":material/error:")
+            # log error
 
 

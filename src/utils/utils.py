@@ -63,7 +63,7 @@ def sync_user(conn, user:dict):
 def project_fragement(conn, project):
     with st.container(border=True, key=f"cont_{project['id']}"):
         st.html(f"<h5 style='margin:0'>{project['title']}</h5>")
-        st.html(f"<small>{project['description']}</small>")
+        st.html(f"<small style='white-space:pre-wrap;'>{project['description']}</small>")
 
         tech_stack_items = " • ".join(str(item) for item in project.get('tech_stack') or [] if item)
         desired_roles_items = " • ".join(str(item) for item in project.get("desired_roles") or [] if item)
@@ -264,36 +264,102 @@ def create_project(conn):
         raise
 
 
-def fetch_projects(conn):
-    query = text("""
-        SELECT
-            p.id, p.title,p.description,p.github_url,p.is_open_to_collab, p.time_created,p.time_updated,
-            u.name AS owner_name,
-            u.email AS owner_email,
-            ARRAY_AGG(DISTINCT c.name) AS categories,
-            ARRAY_AGG(DISTINCT ts.name) AS tech_stack,
-            ARRAY_AGG(DISTINCT r.name) AS desired_roles,
-            COUNT(DISTINCT collab.user_id) AS collaborators
-        FROM data_collab.projects p
-        LEFT JOIN data_collab.project_categories pc ON pc.project_id=p.id
-        LEFT JOIN data_collab.project_tech_stack pts ON pts.project_id=p.id
-        LEFT JOIN data_collab.project_roles pr ON pr.project_id=p.id
-        LEFT JOIN data_collab.project_collaborators collab ON collab.project_id=p.id
-        LEFT JOIN data_collab.users u ON p.owner_id=u.id
-        LEFT JOIN data_collab.categories c ON c.id=pc.category_id
-        LEFT JOIN data_collab.tech_stack ts ON ts.id=pts.tech_stack_id
-        LEFT JOIN data_collab.roles r ON r.id=pr.role_id
-        GROUP BY p.id, u.name,u.email
-        ORDER BY p.time_created DESC;
+def fetch_projects(conn, filters:dict):
+
+    # takes dict of filters
+    # contructs one sql query
+    # filters = {
+    #     "collab_status":collab_filter,
+    #     "tech_stack": tech_stach_filter,
+    #     "categories": categories_filter,
+    #     "team_size": team_size_filter,
+    #     "desired_collabs": roles_filter
+    # }
+
+    where_clause = []
+    having_clause = []
+    query_params = {}
+
+    # collab status
+    if filters['collab_status']:
+        where_clause.append("pb.is_open_to_collab = :collab_status")
+        query_params['collab_status'] = filters['collab_status'] == "Open to collabs" # will return True/False to match db
+
+    # tech stack
+    if filters['tech_stack']:
+        where_clause.append("pb.tech_stack && :tech_stack")
+        query_params['tech_stack'] = filters['tech_stack']
+
+    # categories
+    if filters['categories']:
+        where_clause.append("pb.categories && :categories")
+        query_params['categories'] = filters['categories']
+
+    # desired collabs
+    if filters['desired_collabs']:
+        where_clause.append("pb.desired_roles && :desired_collabs")
+        query_params['desired_collabs'] = filters['desired_collabs']
+
+    # team size
+    if filters['min_team_size'] is not None and filters['max_team_size'] is not None:
+        where_clause.append("pb.collaborators BETWEEN :min_team_size AND :max_team_size")
+        query_params["min_team_size"] = filters['min_team_size']
+        query_params["max_team_size"] = filters['max_team_size']
+
+    elif filters['min_team_size'] is not None:
+        where_clause.append("pb.collaborators >= :min_team_size")
+        query_params["min_team_size"] = filters['min_team_size']
+
+    elif filters['max_team_size'] is not None:
+        where_clause.append("pb.collaborators <= :max_team_size")
+        query_params["max_team_size"] = filters['max_team_size']
+
+
+    # combine clauses
+    combined_where_clause = f"WHERE {' AND '.join(where_clause)}" if where_clause else ""
+    # combined_having_clause = f"HAVING {'AND '.join(having_clause)}" if having_clause else ""
+
+    query = text(f"""
+        WITH projects_base AS(
+            SELECT
+                p.id, 
+                p.title,
+                p.description,
+                p.github_url,
+                p.is_open_to_collab, 
+                p.time_created,
+                p.time_updated,
+                u.name AS owner_name,
+                u.email AS owner_email,
+                ARRAY_AGG(DISTINCT c.name) AS categories,
+                ARRAY_AGG(DISTINCT ts.name) AS tech_stack,
+                ARRAY_AGG(DISTINCT r.name) AS desired_roles,
+                COUNT(DISTINCT collab.user_id) AS collaborators
+            FROM data_collab.projects p
+            LEFT JOIN data_collab.project_categories pc ON pc.project_id=p.id
+            LEFT JOIN data_collab.project_tech_stack pts ON pts.project_id=p.id
+            LEFT JOIN data_collab.project_roles pr ON pr.project_id=p.id
+            LEFT JOIN data_collab.project_collaborators collab ON collab.project_id=p.id
+            LEFT JOIN data_collab.users u ON p.owner_id=u.id
+            LEFT JOIN data_collab.categories c ON c.id=pc.category_id
+            LEFT JOIN data_collab.tech_stack ts ON ts.id=pts.tech_stack_id
+            LEFT JOIN data_collab.roles r ON r.id=pr.role_id
+            GROUP BY p.id, u.name,u.email
+            ORDER BY p.time_created DESC
+        )
+        SELECT * FROM projects_base pb
+        {combined_where_clause}
+        ;
     """)
+
     try:
         with conn.session as session:
-            results = session.execute(query).fetchall()
+            results = session.execute(query, query_params).fetchall()
         return results
     except Exception as e:
         # log e
         st.toast(":red[Error fetching projects. Please reload the page or contact the system admin]",icon=":material/error:" )
-        return None
+        raise
 
 def is_user_collaborator(conn, project_id:int, user_id:int)->bool:
     # check is user is a project collaborator
@@ -414,7 +480,7 @@ def update_project(conn):
         "description": st.session_state.get("edit_project_project_description", "").strip(),
         "project_categories":st.session_state.get("edit_project_project_categories", []),
         "tech_stack": st.session_state.get("edit_project_tech_stack", []),
-        "collab_status": st.session_state.get("edit_project_collab_status", ""),
+        "collab_status": st.session_state.get("edit_project_collab_status", "") == "Yes",
         "desired_roles": st.session_state.get("edit_project_desired_roles", []),
         "github_link": st.session_state.get("edit_project_github_link", "").strip(),
         "owner": user["name"],
@@ -579,4 +645,43 @@ def edit_project(conn):
 
 
     
-    
+def filter_options(conn):
+    # fetches data from db to populate filters
+    tech_stach_filter_options = []
+    categories_filter_options = []
+    roles_filter_options = []
+    max_team_size_filter = 1
+
+    with conn.session as session:
+        
+        # tech stack
+        ts_results = session.execute(text("SELECT DISTINCT name FROM data_collab.tech_stack;"))
+        tech_stach_filter_options = [row[0] for row in ts_results.fetchall()]
+
+        # categories
+        cats_results = session.execute(text("SELECT DISTINCT name FROM data_collab.categories;"))
+        categories_filter_options = [row[0] for row in cats_results.fetchall()]
+
+        # desired collaborations
+        roles_results = session.execute(text("SELECT DISTINCT name FROM data_collab.roles;"))
+        roles_filter_options = [row[0] for row in roles_results.fetchall()]
+
+        # team size
+        max_team_size = session.execute(
+            text("""
+                SELECT MAX(member_count) 
+                FROM (
+                    SELECT COUNT(*) as member_count
+                    FROM data_collab.project_collaborators
+                    GROUP BY project_id
+                ) as grouped;
+            """)).scalar()
+
+        max_team_size_filter = max_team_size
+
+    return {
+        "tech_stach_filter_options":tech_stach_filter_options,
+        "categories_filter_options":categories_filter_options,
+        "roles_filter_options":roles_filter_options,
+        "max_team_size_filter":max_team_size_filter
+    }

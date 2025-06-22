@@ -13,6 +13,10 @@ st.set_page_config(
 )
 
 st.sidebar.markdown("# :blue[DataCollab]")
+utils.ensure_user_in_session(conn)
+menu()
+
+
 
 # will run on st.rerun()
 if "ss_message" in st.session_state:
@@ -22,11 +26,3 @@ if "ss_message" in st.session_state:
         time.sleep(4)
         del st.session_state["ss_message"]
 
-
-
-
-if st.user.is_logged_in:
-    if "user" not in st.session_state:
-        utils.sync_user(conn, st.user)
-
-menu()

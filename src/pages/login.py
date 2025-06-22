@@ -3,7 +3,9 @@ import menu as menu
 
 
 
-menu.unauthenticated_menu()
+st.sidebar.markdown("# :blue[DataCollab]")
+
+menu.projects_menu()
 menu.extras_menu()
 
 st.header("Login")

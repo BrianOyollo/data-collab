@@ -2,6 +2,12 @@ import streamlit as st
 from sqlalchemy import text,exc
 import time
 
+def ensure_user_in_session(conn):
+    # ensures the logged in user is always in session
+    if st.user.is_logged_in:
+        if "user" not in st.session_state:
+            sync_user(conn, st.user)
+
 def add_session_state_msg(msg:dict):
     # adds messages to session state
     # used to go around st.reruns()
@@ -48,7 +54,7 @@ def sync_user(conn, user:dict):
                 result = session.execute(text("SELECT * FROM data_collab.users WHERE email =:email;"), {"email":email}).fetchone()
                 if result:
                     st.session_state['user'] = result._mapping
-        st.toast(":violet[User synced to db]", icon=":material/check:")
+        # st.toast(":violet[User synced to db]", icon=":material/check:")
     except Exception as e:
         st.toast("Error syncing user to db", icon=":material/error")
 
@@ -91,6 +97,8 @@ def project_fragement(conn, project):
             """
 
         )
+
+
         st.write("")
         btn1,btn2,btn3 = st.columns(3)
 
@@ -139,7 +147,9 @@ def project_fragement(conn, project):
                         key=f"edit_project_btn_{project["id"]}"
                     )
                     if edit_project_btn:
-                        st.switch_page("pages/new_project.py")
+                        st.session_state[f"project"] = project
+                        edit_project(conn, project)
+                        
 
                 with btn3:  
                     delete_project_btn = st.button(
@@ -383,3 +393,104 @@ def delete_project(conn, project_id:int)->True:
             raise
 
 
+@st.dialog("Edit Project", width="large")
+def edit_project(conn, project:dict):
+
+    if "user" not in st.session_state:
+        st.switch_page("pages/login.py")
+        return
+    
+    user = st.session_state["user"]
+
+    if user["email"] != project["owner_email"]:
+        st.toast(":red[You are not allowed not edit this project]", icon=":material/error:")
+        return
+
+    # current project details
+    project_title = st.session_state['project']
+
+    # current db content
+    project_categories = []
+    tech_stacks = []
+    roles = []
+    with conn.session as session:
+        # tech stacks
+        project_categories_results = session.execute(text("SELECT name FROM data_collab.categories")).fetchall()
+        project_categories = [row[0] for row in project_categories_results]
+
+        # tech stacks
+        tech_stack_results = session.execute(text("SELECT name FROM data_collab.tech_stack")).fetchall()
+        tech_stacks = [row[0] for row in tech_stack_results]
+
+        # desired collaborations
+        roles_results = session.execute(text("SELECT name FROM data_collab.roles")).fetchall()
+        roles = [row[0] for row in roles_results]
+
+
+    
+    with st.form("Edit Project"):
+        title = st.text_input("Title:", value=project_title['title'], key="edit_project_project_title")
+        description = st.text_area("Description", value=project['description'], key="edit_project_project_description")
+
+        project_categories = st.multiselect(
+            "Project Category(s)", 
+            options=project_categories,
+            default=project['categories'],
+            placeholder="AI, data engineering, frontend development,...", 
+            key="edit_project_project_categories"
+        )
+
+        tech_stack = st.multiselect(
+            "Tech Stack", 
+            options=tech_stacks,
+            default=project['tech_stack'],
+            placeholder="python, sql, excel,...", key="edit_project_tech_stack")
+        
+        collab_status = st.radio(
+            "Are you open to collaborations?",
+            options=["Yes", "Maybe Later"],
+            captions=["", "Selected collaborations below won't be saved"],
+            horizontal=True,
+            key="edit_project_collab_status"
+        )
+
+        desired_roles = st.multiselect(
+            "Collaborations", 
+            options=roles, 
+            default = project['desired_roles'],
+            placeholder="pick the roles you want to collaborate with", 
+            key="edit_project_desired_roles"
+        )
+
+        github_url = st.text_input("GitHub link",value=project['github_url'], key="edit_project_github_link")
+
+        st.write(" ")
+        edit_project = st.form_submit_button(
+            ":orange[Save Changes]", 
+            type="tertiary", 
+            use_container_width=True,
+            icon=":material/save:")
+
+
+        if edit_project:
+            updated_project_data = {
+                "title": st.session_state.get("edit_project_project_title", "").strip(),
+                "description": st.session_state.get("edit_project_project_description", "").strip(),
+                "project_categories":st.session_state.get("edit_project_project_categories", []),
+                "tech_stack": st.session_state.get("edit_project_tech_stack", []),
+                "collab_status": st.session_state.get("edit_project_collab_status", ""),
+                "desired_roles": st.session_state.get("edit_project_desired_roles", []),
+                "github_link": st.session_state.get("edit_project_github_link", "").strip(),
+                "owner": user["name"],
+                "owner_email":user["email"],
+                "owner_id":user["id"]
+            }
+            if updated_project_data["collab_status"] == "Maybe Later":
+                updated_project_data['desired_roles'] = None
+
+            st.toast(updated_project_data)
+
+
+
+    
+    

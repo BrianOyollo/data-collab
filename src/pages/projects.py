@@ -1,9 +1,18 @@
 import streamlit as st
 from utils import utils
 import menu as menu
+import time
 
 conn = st.connection("sql")
+utils.ensure_user_in_session(conn)
 
+# will run on st.rerun()
+if "ss_message" in st.session_state:
+    message = st.session_state["ss_message"]
+    if message is not None:
+        st.toast(message["text"], icon=f'{message["icon"]}')
+        time.sleep(4)
+        del st.session_state["ss_message"]
 
 st.sidebar.markdown("# :blue[DataCollab]")
 with st.sidebar:

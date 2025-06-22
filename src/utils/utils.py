@@ -81,7 +81,7 @@ def project_fragement(conn, project):
 
 
         # projet github link
-        project_link = f"[GitHub](project['github_url'])"
+        project_link = f"[GitHub]({project['github_url']})"
 
         # collab status
         collab_status = collab_status = "green-badge[:material/handshake: Open to Collab]"
@@ -147,8 +147,8 @@ def project_fragement(conn, project):
                         key=f"edit_project_btn_{project["id"]}"
                     )
                     if edit_project_btn:
-                        st.session_state[f"project"] = project
-                        edit_project(conn, project)
+                        st.session_state["original_project"] = project
+                        edit_project(conn)
                         
 
                 with btn3:  
@@ -393,23 +393,118 @@ def delete_project(conn, project_id:int)->True:
             raise
 
 
-@st.dialog("Edit Project", width="large")
-def edit_project(conn, project:dict):
+def update_project(conn):
 
-    if "user" not in st.session_state:
+    # user must be logged in
+    if not st.user.is_logged_in:
         st.switch_page("pages/login.py")
-        return
-    
+
     user = st.session_state["user"]
+
+    # current project details
+    project = st.session_state['original_project']
 
     if user["email"] != project["owner_email"]:
         st.toast(":red[You are not allowed not edit this project]", icon=":material/error:")
         return
 
-    # current project details
-    project_title = st.session_state['project']
 
-    # current db content
+    updated_project_data = {
+        "title": st.session_state.get("edit_project_project_title", "").strip(),
+        "description": st.session_state.get("edit_project_project_description", "").strip(),
+        "project_categories":st.session_state.get("edit_project_project_categories", []),
+        "tech_stack": st.session_state.get("edit_project_tech_stack", []),
+        "collab_status": st.session_state.get("edit_project_collab_status", ""),
+        "desired_roles": st.session_state.get("edit_project_desired_roles", []),
+        "github_link": st.session_state.get("edit_project_github_link", "").strip(),
+        "owner": user["name"],
+        "owner_email":user["email"],
+        "owner_id":user["id"]
+    }
+    if updated_project_data["collab_status"] == "Maybe Later":
+        updated_project_data['desired_roles'] = None
+
+    try:
+        with conn.session as session:
+            project_update_query = text("""
+                UPDATE data_collab.projects
+                SET title=:title,description=:description,github_url=:github_url,is_open_to_collab=:collab_status
+                WHERE id=:project_id AND owner_id=:owner_id
+                RETURNING id;"""
+            )
+
+            # update projects table
+            session.execute(project_update_query,{
+                "title":updated_project_data["title"],
+                "description":updated_project_data["description"],
+                "github_url":updated_project_data["github_link"],
+                "collab_status":updated_project_data["collab_status"],
+                "project_id":project["id"],
+                "owner_id":updated_project_data["owner_id"]
+
+            })
+
+            # clear tech stack, categories and desired roles mappings
+            session.execute(
+                text("DELETE FROM data_collab.project_tech_stack WHERE project_id = :project_id"),
+                {"project_id": project["id"]}
+            )
+            session.execute(
+                text("DELETE FROM data_collab.project_roles WHERE project_id = :project_id"),
+                {"project_id": project["id"]}
+            )
+            session.execute(
+                text("DELETE FROM data_collab.project_categories WHERE project_id = :project_id"),
+                {"project_id": project["id"]}
+            )
+
+            # update tech stack
+            if updated_project_data['tech_stack']:
+                updated_tech_stack_query = text("""INSERT INTO data_collab.project_tech_stack(project_id,tech_stack_id)
+                    SELECT :project_id, id FROM data_collab.tech_stack ts
+                    WHERE ts.name=ANY(:tech_stack);""")
+                session.execute(updated_tech_stack_query, {
+                    "project_id":project['id'], "tech_stack":updated_project_data['tech_stack']
+                })
+        
+            # update categories
+            if updated_project_data["project_categories"]:
+                update_categories_query = text("""
+                    INSERT INTO data_collab.project_categories(project_id, category_id)
+                    SELECT :project_id, id FROM data_collab.categories c
+                    WHERE c.name = ANY(:categories)
+                """)
+                session.execute(update_categories_query, {
+                    "project_id": project["id"],
+                    "categories": updated_project_data["project_categories"]
+                })
+            
+            # update roles
+            if updated_project_data['desired_roles']:
+                if updated_project_data["desired_roles"]:
+                    update_roles_query = text("""
+                        INSERT INTO data_collab.project_roles(project_id, role_id)
+                        SELECT :project_id, id FROM data_collab.roles r
+                        WHERE r.name = ANY(:roles)
+                    """)
+                    session.execute(update_roles_query, {
+                        "project_id": project["id"],
+                        "roles": updated_project_data["desired_roles"]
+                    })
+
+            session.commit()
+            st.toast(":green[Project successfully updated]", icon=":material/celebration:")
+            st.rerun()
+    except Exception:
+        st.toast(":red[Error updating project. Please try again later or contact your system admin]", icon=":material/error:")
+        raise
+
+@st.dialog("Edit Project", width="large")
+def edit_project(conn):
+
+    # current project details
+    project = st.session_state['original_project']
+
     project_categories = []
     tech_stacks = []
     roles = []
@@ -429,7 +524,7 @@ def edit_project(conn, project:dict):
 
     
     with st.form("Edit Project"):
-        title = st.text_input("Title:", value=project_title['title'], key="edit_project_project_title")
+        title = st.text_input("Title:", value=project['title'], key="edit_project_project_title")
         description = st.text_area("Description", value=project['description'], key="edit_project_project_description")
 
         project_categories = st.multiselect(
@@ -462,7 +557,12 @@ def edit_project(conn, project:dict):
             key="edit_project_desired_roles"
         )
 
-        github_url = st.text_input("GitHub link",value=project['github_url'], key="edit_project_github_link")
+        github_url = st.text_input("GitHub link",
+            value=project['github_url'], 
+            placeholder="https://github.com/janedoe",
+            label_visibility="visible",
+            help="Please enter a full GitHub url",
+            key="edit_project_github_link")
 
         st.write(" ")
         edit_project = st.form_submit_button(
@@ -473,22 +573,8 @@ def edit_project(conn, project:dict):
 
 
         if edit_project:
-            updated_project_data = {
-                "title": st.session_state.get("edit_project_project_title", "").strip(),
-                "description": st.session_state.get("edit_project_project_description", "").strip(),
-                "project_categories":st.session_state.get("edit_project_project_categories", []),
-                "tech_stack": st.session_state.get("edit_project_tech_stack", []),
-                "collab_status": st.session_state.get("edit_project_collab_status", ""),
-                "desired_roles": st.session_state.get("edit_project_desired_roles", []),
-                "github_link": st.session_state.get("edit_project_github_link", "").strip(),
-                "owner": user["name"],
-                "owner_email":user["email"],
-                "owner_id":user["id"]
-            }
-            if updated_project_data["collab_status"] == "Maybe Later":
-                updated_project_data['desired_roles'] = None
-
-            st.toast(updated_project_data)
+            update_project(conn)
+            st.toast(st.user)
 
 
 

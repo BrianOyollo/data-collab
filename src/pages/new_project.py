@@ -60,7 +60,12 @@ def create_project_form():
             key="new_project_desired_roles"
         )
 
-        github_url = st.text_input("GitHub link", key="new_project_github_link")
+        github_url = st.text_input("GitHub link", 
+            placeholder="https://github.com/janedoe", 
+            label_visibility="visible",
+            help="Please enter a full GitHub url",
+            key="new_project_github_link"
+        )
         create_project = st.form_submit_button("Create")
         return create_project
 

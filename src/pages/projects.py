@@ -6,6 +6,7 @@ import time
 conn = st.connection("sql")
 utils.ensure_user_in_session(conn)
 
+
 # will run on st.rerun()
 if "ss_message" in st.session_state:
     message = st.session_state["ss_message"]

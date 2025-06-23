@@ -3,10 +3,14 @@ CREATE SCHEMA data_collab;
 
 CREATE TABLE IF NOT EXISTS data_collab.users (
     id SERIAL PRIMARY KEY,
-    name TEXT,
-    email TEXT UNIQUE NOT NULL,
+    name VARCHAR(100),
+    email VARCHAR(255) UNIQUE NOT NULL,
     profile_image TEXT,
-    provider TEXT DEFAULT 'google', -- incase another provider is added
+    phone VARCHAR(15),
+    github_url TEXT,
+    linked_url TEXT,
+    portfolio_url TEXT,
+    identity_provider VARCHAR(100) DEFAULT 'google', -- incase another provider is added
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 

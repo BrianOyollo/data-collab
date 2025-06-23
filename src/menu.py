@@ -14,6 +14,7 @@ def projects_menu():
     # st.sidebar.write(":orange[Projects]")
     st.sidebar.page_link("pages/projects.py", label="Projects", use_container_width=True)
     st.sidebar.page_link("pages/new_project.py", label="Add a Project", use_container_width=True)
+    
 
 def extras_menu():
     # st.sidebar.write(":orange[Extras]") 

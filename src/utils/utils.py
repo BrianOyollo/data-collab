@@ -8,6 +8,14 @@ def ensure_user_in_session(conn):
         if "user" not in st.session_state:
             sync_user(conn, st.user)
 
+def display_messages():
+    if "ss_message" in st.session_state:
+        message = st.session_state["ss_message"]
+        if message is not None:
+            st.toast(message["text"], icon=f'{message["icon"]}')
+            # time.sleep(4)
+            del st.session_state["ss_message"]
+
 def add_session_state_msg(msg:dict):
     # adds messages to session state
     # used to go around st.reruns()
@@ -40,9 +48,21 @@ def sync_user(conn, user:dict):
     
     try:
         with conn.session as session:
-            result = session.execute(text("SELECT * FROM data_collab.users WHERE email =:email;"), {"email":email}).fetchone()
+            result = session.execute(
+                text("""
+                    SELECT 
+                        id,
+                        name,
+                        email,
+                        profile_image,
+                        DATE(time_created) AS joining_date,
+                        phone,github_url,linkedin_url,portfolio_url
+                    FROM data_collab.users WHERE email =:email;
+                """),
+                {"email":email}
+            ).fetchone()
             if result:
-                st.session_state['user'] = result._mapping
+                st.session_state['user'] = dict(result._mapping)
             else:
                 session.execute(
                     text("""INSERT INTO data_collab.users(name,email,profile_image) VALUES(:name,:email,:profile_image);"""), 
@@ -51,9 +71,21 @@ def sync_user(conn, user:dict):
                 session.commit()
                 
                 # fetch user data
-                result = session.execute(text("SELECT * FROM data_collab.users WHERE email =:email;"), {"email":email}).fetchone()
+                result = session.execute(
+                    text("""
+                        SELECT 
+                            id,
+                            name,
+                            email,
+                            profile_image,
+                            DATE(time_created) AS joining_date,
+                            phone,github_url,linkedin_url,portfolio_url
+                        FROM data_collab.users WHERE email =:email;
+                    """),
+                    {"email":email}
+                ).fetchone()
                 if result:
-                    st.session_state['user'] = result._mapping
+                    st.session_state['user'] = dict(result._mapping)
         # st.toast(":violet[User synced to db]", icon=":material/check:")
     except Exception as e:
         st.toast("Error syncing user to db", icon=":material/error")
@@ -62,22 +94,24 @@ def sync_user(conn, user:dict):
 @st.fragment
 def project_fragement(conn, project):
     with st.container(border=True, key=f"cont_{project['id']}"):
-        st.html(f"<h5 style='margin:0'>{project['title']}</h5>")
-        st.html(f"<small style='white-space:pre-wrap;'>{project['description']}</small>")
+        # st.html(f"<h4 style='margin:0'>{project['title']}</h4>")
+        # st.subheader(project['title'])
+        st.page_link("pages/project_details.py", label=f"{project['title']}", use_container_width=True)
+        st.html(f"<p style='white-space:pre-wrap; color='gray'>{project['description']}</p>")
 
-        tech_stack_items = " • ".join(str(item) for item in project.get('tech_stack') or [] if item)
-        desired_roles_items = " • ".join(str(item) for item in project.get("desired_roles") or [] if item)
-        categories = " • ".join(str(item) for item in project.get('categories') or [] if item)
+        tech_stack_items = " / ".join(str(item) for item in project.get('tech_stack') or [] if item)
+        desired_roles_items = " / ".join(str(item) for item in project.get("desired_roles") or [] if item)
+        categories = " / ".join(str(item) for item in project.get('categories') or [] if item)
 
         tech_stack, desired_roles, project_category = st.tabs(["Tech Stack","Looking to collab with","Project Categories"])
         with tech_stack:
-            st.markdown(f"<small style='margin:0'>{tech_stack_items}</small>", unsafe_allow_html=True)
+            st.markdown(f"<span style='margin:0'>{tech_stack_items}</span>", unsafe_allow_html=True)
 
         with desired_roles:
-            st.markdown(f"<small style='margin:0'>{desired_roles_items}</small>", unsafe_allow_html=True)
+            st.markdown(f"<span style='margin:0'>{desired_roles_items}</span>", unsafe_allow_html=True)
 
         with project_category:
-            st.markdown(f"<small style='margin:0'>{categories}</small>", unsafe_allow_html=True)
+            st.markdown(f"<span style='margin:0'>{categories}</span>", unsafe_allow_html=True)
 
 
         # projet github link
@@ -640,7 +674,7 @@ def edit_project(conn):
 
         if edit_project:
             update_project(conn)
-            st.toast(st.user)
+            # st.toast(st.user)
 
 
 

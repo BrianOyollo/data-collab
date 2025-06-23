@@ -19,10 +19,4 @@ menu()
 
 
 # will run on st.rerun()
-if "ss_message" in st.session_state:
-    message = st.session_state["ss_message"]
-    if message is not None:
-        st.toast(message["text"], icon=f'{message["icon"]}')
-        time.sleep(4)
-        del st.session_state["ss_message"]
-
+utils.display_messages()

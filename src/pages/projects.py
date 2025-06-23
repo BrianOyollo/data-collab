@@ -3,6 +3,12 @@ from utils import utils
 import menu as menu
 import time
 
+st.set_page_config(
+    page_title="Projects",
+    page_icon="🧊",
+    layout="wide",
+)
+
 conn = st.connection("sql")
 utils.ensure_user_in_session(conn)
 
@@ -21,31 +27,33 @@ st.sidebar.markdown("# :blue[DataCollab]")
 with st.sidebar:
     st.page_link("app.py", label="Back to main menu", icon=":material/arrow_left_alt:")
     menu.projects_menu()
+    st.divider()
 
     # filters 
 
     filter_data = utils.filter_options(conn)
 
 
-    filter_col, reset_col = st.columns(2, vertical_alignment="top")
-    
+    filter_col, reset_col = st.columns(2)
+
     with filter_col:
-        st.subheader("Filters")
+        st.html("<h2 style='margin-top:0px; padding:0px'>Filters</h2>")
     
     with reset_col:
-        reset_filters = st.button("Reset", type="tertiary", key="reset_filters")
+        # reset filters
+        reset_filters = st.button("Reset", type="secondary", icon=":material/filter_list_off:", key="reset_filters", use_container_width=True)
         if reset_filters:
             st.session_state.collab_status_filter = None
             st.session_state.tech_stack_filter = []
             st.session_state.categories_filter = []
             st.session_state.roles_filter = []
-            st.session_state.min_team_size = 0
-            st.session_state.max_team_size = filter_data['max_team_size_filter']
+            st.session_state.min_team_size = None
+            st.session_state.max_team_size = None
             # st.rerun()
 
     # by collab status
     collab_filter = st.selectbox(
-        ":orange[Collab status]",
+        "Collab status",
         options = ["Open to collabs", "Closed to collabs"],
         index=None,
         width="stretch",
@@ -54,32 +62,33 @@ with st.sidebar:
 
     # tech stack
     tech_stack_filter = st.multiselect(
-        ":orange[Tech Stack]",
+        "Tech Stack",
         options = filter_data['tech_stach_filter_options'],
         key="tech_stack_filter"
     )
 
     # categories
     categories_filter = st.multiselect(
-        ":orange[Project Categories]",
+        "Project Categories",
         options = filter_data['categories_filter_options'],
         key="categories_filter"
     )
 
     # roles
     roles_filter = st.multiselect(
-        ":orange[Desired Collaborations]",
+        "Desired Collaborations",
         options = filter_data['roles_filter_options'],
         key="roles_filter"
     )
 
     # team size
-    st.write(":orange[Team Size]")
+    st.write("Team Size")
     min_col, max_col = st.columns(2)
     with min_col:
         min_team_size = st.number_input(
             "Min", 
             min_value=0, 
+            value = None,
             step=1, 
             label_visibility="collapsed", 
             placeholder="min",
@@ -90,7 +99,7 @@ with st.sidebar:
         max_team_size = st.number_input(
             "Max", 
             min_value=0, 
-            value=filter_data['max_team_size_filter'], 
+            value=None, 
             step=1, 
             label_visibility="collapsed",
             placeholder="max", 

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS data_collab.users (
     profile_image TEXT,
     phone VARCHAR(15),
     github_url TEXT,
-    linked_url TEXT,
+    linkedin_url TEXT,
     portfolio_url TEXT,
     identity_provider VARCHAR(100) DEFAULT 'google', -- incase another provider is added
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS data_collab.projects (
     description TEXT NOT NULL,
     github_url TEXT,
     is_open_to_collab BOOLEAN DEFAULT TRUE,
-    owner_id INTEGER REFERENCES data_collab.users(id) ON SET NULL,
+    owner_id INTEGER REFERENCES data_collab.users(id) ON DELETE SET NULL,
     time_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     time_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

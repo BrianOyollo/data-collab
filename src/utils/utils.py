@@ -88,7 +88,8 @@ def sync_user(conn, user:dict):
                     st.session_state['user'] = dict(result._mapping)
         # st.toast(":violet[User synced to db]", icon=":material/check:")
     except Exception as e:
-        st.toast("Error syncing user to db", icon=":material/error")
+        # st.toast("Error syncing user to db", icon=":material/error:")
+        print(e)
 
 
 @st.fragment

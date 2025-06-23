@@ -13,8 +13,6 @@ utils.display_messages()
 menu.projects_menu()
 menu.extras_menu()
 
-
-
 if not st.user.is_logged_in:
     col1,col2,col3 = st.columns(3, vertical_alignment="center")
 

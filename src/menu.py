@@ -9,6 +9,9 @@ conn = st.connection('sql')
 #     if st.user.is_logged_in:
 #         if "user" not in st.session_state:
 #             utils.sync_user(conn, st.user)
+def home_page():
+    st.sidebar.page_link("app.py", label="Home",icon=":material/home_app_logo:", use_container_width=True)
+
 
 def projects_menu():
     # st.sidebar.write(":orange[Projects]")
@@ -18,7 +21,6 @@ def projects_menu():
 
 def extras_menu():
     # st.sidebar.write(":orange[Extras]") 
-    st.sidebar.page_link("pages/blogs.py", label="Blogs")
     st.sidebar.page_link("pages/about.py", label="About DataCollab")  
 
 
@@ -41,6 +43,7 @@ def admin_menu():
 
 
 def menu():
+    home_page()
     projects_menu()
     extras_menu()
     authenticated_menu()

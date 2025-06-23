@@ -4,6 +4,8 @@ from utils import utils
 from menu import menu
 
 conn = st.connection("sql")
+
+utils.display_messages()
 utils.ensure_user_in_session(conn)
 
 st.sidebar.markdown("# :blue[DataCollab]")
@@ -82,7 +84,7 @@ if st.user.is_logged_in:
 else:
     utils.add_session_state_msg({
             "text":":red[You must login first to add a project]",
-            "icon":":material/celebration:"
+            "icon":":material/error:"
     })
     st.switch_page("pages/login.py")
 

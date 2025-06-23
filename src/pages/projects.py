@@ -25,7 +25,7 @@ if "ss_message" in st.session_state:
 # ============================================= SIDEBAR ============================================================
 st.sidebar.markdown("# :blue[DataCollab]")
 with st.sidebar:
-    st.page_link("app.py", label="Back to main menu", icon=":material/arrow_left_alt:")
+    st.page_link("app.py", label="Home", icon=":material/home_app_logo:")
     menu.projects_menu()
     st.divider()
 
